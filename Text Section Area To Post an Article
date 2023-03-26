@@ -1,0 +1,93 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_quill/flutter_quill.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+class Article {
+  String title;
+  String content;
+
+  Article({required this.title, required this.content});
+
+  Map<String, dynamic> toMap() {
+    return {
+      'title': title,
+      'content': content,
+    };
+  }
+}
+
+class ArticleForm extends StatefulWidget {
+  const ArticleForm({Key? key}) : super(key: key);
+
+  @override
+  _ArticleFormState createState() => _ArticleFormState();
+}
+
+class _ArticleFormState extends State<ArticleForm> {
+  final _formKey = GlobalKey<FormState>();
+  final _titleController = TextEditingController();
+  QuillController _quillController = QuillController.basic();
+
+  void _saveArticle() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    final newArticle = Article(
+      title: _titleController.text,
+      content: _quillController.document.toPlainText(),
+    );
+    List<String> articles = prefs.getStringList('articles') ?? [];
+    articles.add(newArticle.toMap().toString());
+    prefs.setStringList('articles', articles);
+    _titleController.clear();
+    _quillController = QuillController.basic();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Write an Article'),
+      ),
+      body: Padding(
+        padding: EdgeInsets.all(16.0),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              TextFormField(
+                controller: _titleController,
+                decoration: InputDecoration(
+                  hintText: 'Enter a title',
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter a title';
+                  }
+                  return null;
+                },
+              ),
+              SizedBox(height: 16.0),
+              Expanded(
+                child: QuillEditor(
+                  controller: _quillController,
+                  readOnly: false,
+                  expands: true,
+                  padding: EdgeInsets.zero,
+                  focusNode: FocusNode(),
+                  autoFocus: false,
+                ),
+              ),
+              SizedBox(height: 16.0),
+              ElevatedButton(
+                onPressed: () {
+                  if (_formKey.currentState!.validate()) {
+                    _saveArticle();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Article saved'),
+                      ),
+                    );
+                  }
+                },
+                child: Text('Save Article'),
+             
